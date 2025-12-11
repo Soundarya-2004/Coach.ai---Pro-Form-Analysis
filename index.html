@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coach.ai</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #ffffff;
+        color: #000000;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      /* Neo-brutalist shadow utility */
+      .neo-shadow {
+        box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
+      }
+      .neo-shadow-sm {
+        box-shadow: 2px 2px 0px 0px rgba(0,0,0,1);
+      }
+      
+      /* Dark mode overrides */
+      .dark body {
+        background-color: #000000;
+        color: #ffffff;
+      }
+      .dark .neo-shadow {
+        box-shadow: 4px 4px 0px 0px rgba(255,255,255,1);
+      }
+      .dark .neo-shadow-sm {
+        box-shadow: 2px 2px 0px 0px rgba(255,255,255,1);
+      }
+
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.32.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
