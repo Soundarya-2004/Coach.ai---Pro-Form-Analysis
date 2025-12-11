@@ -98,9 +98,10 @@ export interface WorkoutSession {
   data: AnalysisResponse;
 }
 
-// Global definition for canvas-confetti
+// Global definition for canvas-confetti and jspdf
 declare global {
   interface Window {
     confetti: any;
+    jspdf: any;
   }
 }

@@ -1,42 +1,9 @@
-
 import { User, WorkoutSession, WeightEntry } from "../types";
 
-const DB_USERS_KEY = "coach_ai_users_db";
-const DB_SESSIONS_KEY = "coach_ai_sessions_db";
-
-interface UserDB {
-  [email: string]: User & { password?: string };
-}
-
-interface SessionDB {
-  [email: string]: WorkoutSession[];
-}
+const STORAGE_USER_KEY = "coach_ai_local_user_v1";
+const STORAGE_SESSIONS_KEY = "coach_ai_local_sessions_v1";
 
 // --- Helpers ---
-
-const getUsersDB = (): UserDB => {
-  try {
-    return JSON.parse(localStorage.getItem(DB_USERS_KEY) || "{}");
-  } catch {
-    return {};
-  }
-};
-
-const saveUsersDB = (db: UserDB) => {
-  localStorage.setItem(DB_USERS_KEY, JSON.stringify(db));
-};
-
-const getSessionsDB = (): SessionDB => {
-  try {
-    return JSON.parse(localStorage.getItem(DB_SESSIONS_KEY) || "{}");
-  } catch {
-    return {};
-  }
-};
-
-const saveSessionsDB = (db: SessionDB) => {
-  localStorage.setItem(DB_SESSIONS_KEY, JSON.stringify(db));
-};
 
 export const calculateAge = (dob: string): number => {
   const birthDate = new Date(dob);
@@ -53,49 +20,86 @@ export const generateInitialProgram = (age: number, weight: number): string => {
   return "High Performance Conditioning";
 };
 
-// --- Auth & User Management ---
+// --- Local Data Management ---
 
-export const checkUserExists = (email: string): boolean => {
-  const db = getUsersDB();
-  return !!db[email];
-};
-
-export const verifyCredentials = (email: string, password: string): User | null => {
-  const db = getUsersDB();
-  const user = db[email];
-  if (user && user.password === password) {
-    // Return user without password field to frontend
-    const { password: _, ...safeUser } = user;
-    return safeUser as User;
+export const getLocalUser = (): User | null => {
+  try {
+    const data = localStorage.getItem(STORAGE_USER_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch {
+    return null;
   }
-  return null;
 };
 
-export const createAccount = (
-  email: string, 
-  password: string, 
-  name: string, 
-  avatar: string,
-  dob?: string,
-  weight?: number
-): User => {
-  const db = getUsersDB();
-  
-  // Logic for defaults if not provided (e.g. Google Auth mock)
-  const finalDob = dob || "1990-01-01";
-  const finalWeight = weight || 75;
-  const age = calculateAge(finalDob);
-  const initialProgram = generateInitialProgram(age, finalWeight);
-  
-  const weightHistory: WeightEntry[] = [{
-    date: new Date().toISOString().split('T')[0],
-    weight: finalWeight
-  }];
+export const saveLocalUser = (user: User) => {
+  localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
+};
 
-  const newUser: User & { password: string } = {
-    name,
-    email,
-    avatar,
+export const getLocalSessions = (): WorkoutSession[] => {
+  try {
+    const data = localStorage.getItem(STORAGE_SESSIONS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const saveLocalSession = (session: WorkoutSession) => {
+  const sessions = getLocalSessions();
+  const newSessions = [session, ...sessions];
+  localStorage.setItem(STORAGE_SESSIONS_KEY, JSON.stringify(newSessions));
+};
+
+export const clearLocalData = async () => {
+  try {
+    console.log("Executing Factory Reset...");
+
+    // 1. Clear standard web storage
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // 2. Clear Caches API (Service Workers, PWA caches)
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(key => caches.delete(key)));
+    }
+
+    // 3. Clear IndexedDB Databases
+    // Note: window.indexedDB.databases() is not supported in all browsers (e.g. standard Firefox), 
+    // so we wrap it safely.
+    if (window.indexedDB && typeof window.indexedDB.databases === 'function') {
+      const dbs = await window.indexedDB.databases();
+      await Promise.all(dbs.map(db => 
+        db.name ? new Promise<void>((resolve, reject) => {
+          const request = window.indexedDB.deleteDatabase(db.name!);
+          request.onsuccess = () => resolve();
+          request.onerror = () => resolve(); // Resolve anyway to continue
+          request.onblocked = () => resolve();
+        }) : Promise.resolve()
+      ));
+    }
+
+    console.log("Storage wiped successfully.");
+  } catch (error) {
+    console.error("Error during storage reset:", error);
+    // Fallback sync clear
+    localStorage.clear();
+    sessionStorage.clear();
+  }
+};
+
+export const initializeDefaultUser = (): User => {
+  const existing = getLocalUser();
+  if (existing) return existing;
+
+  const defaultWeight = 75;
+  const dob = "1995-01-01";
+  const age = calculateAge(dob);
+  
+  const newUser: User = {
+    name: "Guest Athlete",
+    email: "local@device", // Dummy identifier
+    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=Athlete`,
     streak: 0,
     lastWorkoutDate: null,
     totalCalories: 0,
@@ -104,48 +108,21 @@ export const createAccount = (
     daily_calories_log: [],
     scheduled_workouts: [],
     manual_activity_log: [],
-    dob: finalDob,
-    weight: finalWeight,
-    weight_history: weightHistory,
+    dob: dob,
+    weight: defaultWeight,
+    weight_history: [{
+      date: new Date().toISOString().split('T')[0],
+      weight: defaultWeight
+    }],
     age: age,
-    initial_program: initialProgram,
-    password // Storing strictly for this demo's auth requirement
+    initial_program: generateInitialProgram(age, defaultWeight)
   };
 
-  db[email] = newUser;
-  saveUsersDB(db);
-
-  const { password: _, ...safeUser } = newUser;
-  return safeUser as User;
+  saveLocalUser(newUser);
+  return newUser;
 };
 
-export const updateUser = (user: User) => {
-  const db = getUsersDB();
-  const existing = db[user.email];
-  
-  if (existing) {
-    db[user.email] = { ...existing, ...user };
-    saveUsersDB(db);
-  }
-};
-
-// --- Session Management ---
-
-export const getUserSessions = (email: string): WorkoutSession[] => {
-  const db = getSessionsDB();
-  return db[email] || [];
-};
-
-export const saveUserSession = (email: string, session: WorkoutSession) => {
-  const db = getSessionsDB();
-  const userSessions = db[email] || [];
-  
-  // Prepend new session
-  db[email] = [session, ...userSessions];
-  saveSessionsDB(db);
-};
-
-// --- Utilities ---
+// --- Streak Logic (Pure Functions) ---
 
 export const calculateStreak = (lastDate: string | null, currentStreak: number): number => {
   if (!lastDate) return 0; // If no last date, streak is 0 unless updated today

@@ -3,9 +3,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, WorkoutSession } from '../types';
 import { Card } from './Card';
 import { Button } from './Button';
-import { Flame, Clock, Trophy, ArrowRight, Activity, Calendar, UploadCloud, TrendingUp, Target, Star, Scale, Edit2, Check, X, History } from 'lucide-react';
+import { Flame, Clock, Trophy, ArrowRight, Activity, Calendar, UploadCloud, TrendingUp, Target, Star, Scale, Edit2, Check, X, History, Download } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, LineChart, Line } from 'recharts';
 import { CoachAvatar } from './CoachAvatar';
+import { exportProfileData } from '../services/pdfExport';
 
 interface DashboardProps {
   user: User;
@@ -388,6 +389,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </Button>
                 <Button onClick={onManualLogClick} variant="outline" fullWidth className="justify-start text-sm">
                   <Activity className="w-4 h-4 mr-2" /> Log Manual Activity
+                </Button>
+                <Button onClick={() => exportProfileData(user, sessions)} variant="outline" fullWidth className="justify-start text-sm text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800">
+                  <Download className="w-4 h-4 mr-2" /> Download Profile Data
                 </Button>
               </div>
            </div>

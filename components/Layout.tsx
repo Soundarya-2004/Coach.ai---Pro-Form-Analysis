@@ -1,15 +1,16 @@
+
 import React from 'react';
-import { LogOut, Moon, Sun } from 'lucide-react';
+import { Trash2, Moon, Sun } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
   userImage?: string;
-  onLogout: () => void;
+  onResetData: () => void;
   darkMode: boolean;
   toggleTheme: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, userImage, onLogout, darkMode, toggleTheme }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, userImage, onResetData, darkMode, toggleTheme }) => {
   return (
     <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white font-sans transition-colors duration-300">
       <nav className="sticky top-0 z-40 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b-2 border-black dark:border-white transition-colors duration-300">
@@ -30,8 +31,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, userImage, onLogout, d
                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
              </button>
              {userImage && <img src={userImage} alt="User" className="w-8 h-8 rounded-full border-2 border-black dark:border-white" />}
-             <button onClick={onLogout} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg transition-colors">
-               <LogOut className="w-5 h-5" />
+             
+             <button 
+                onClick={onResetData} 
+                className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 rounded-lg transition-colors"
+                title="Clear Data & Reset"
+             >
+               <Trash2 className="w-5 h-5" />
              </button>
           </div>
         </div>

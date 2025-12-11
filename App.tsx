@@ -1,9 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, WorkoutSession, AnalysisResponse, ScheduledWorkout, ManualActivity } from './types';
-import { updateUser, getUserSessions, saveUserSession, incrementStreak, calculateStreak, generateInitialProgram } from './services/storage';
+import { 
+  saveLocalUser, 
+  getLocalSessions, 
+  saveLocalSession, 
+  incrementStreak, 
+  calculateStreak, 
+  generateInitialProgram,
+  initializeDefaultUser,
+  clearLocalData
+} from './services/storage';
 import { analyzeVideo } from './services/geminiService';
-import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
 import { Layout } from './components/Layout';
 import { VideoUpload } from './components/VideoUpload';
@@ -41,27 +48,50 @@ function App() {
     }
   }, [darkMode]);
 
-  const toggleTheme = () => setDarkMode(!darkMode);
-
-  const handleLogin = (loggedInUser: User) => {
-    // On login, we calculate if the streak is still valid based on the last workout date found in DB
-    const currentStreak = calculateStreak(loggedInUser.lastWorkoutDate, loggedInUser.streak);
+  // Initialization Effect
+  useEffect(() => {
+    const localUser = initializeDefaultUser();
     
-    const updatedUser = { ...loggedInUser, streak: currentStreak };
+    // Check streak validity on startup
+    const currentStreak = calculateStreak(localUser.lastWorkoutDate, localUser.streak);
     
-    // Save the streak update if it changed
-    if (currentStreak !== loggedInUser.streak) {
-       updateUser(updatedUser);
+    let userToSet = localUser;
+    if (currentStreak !== localUser.streak) {
+        userToSet = { ...localUser, streak: currentStreak };
+        saveLocalUser(userToSet);
     }
     
-    setUser(updatedUser);
-    setSessions(getUserSessions(updatedUser.email));
-  };
+    setUser(userToSet);
+    setSessions(getLocalSessions());
+  }, []);
 
-  const handleLogout = () => {
-    setUser(null);
-    setCurrentAnalysis(null);
-    setSessions([]);
+  const toggleTheme = () => setDarkMode(!darkMode);
+
+  const handleClearData = async () => {
+    if (confirm("Are you sure you want to clear all your data? This action cannot be undone.")) {
+      try {
+        // 1. Reset immediate UI state to stop any ongoing operations
+        setIsAnalyzing(false);
+        setIsUploading(false);
+        
+        // 2. Perform deep storage clean
+        await clearLocalData();
+        
+        // 3. Wipe in-memory state references to prevent auto-save effects
+        setUser(null);
+        setSessions([]);
+        setCurrentAnalysis(null);
+        setViewingSession(null);
+        
+        // 4. Force hard reload to restart application from clean slate
+        window.location.reload();
+      } catch (e) {
+        console.error("Reset failed", e);
+        // Emergency fallback
+        localStorage.clear();
+        window.location.reload();
+      }
+    }
   };
 
   const handleWeightUpdate = (weight: number) => {
@@ -91,7 +121,7 @@ function App() {
     };
     
     setUser(updatedUser);
-    updateUser(updatedUser);
+    saveLocalUser(updatedUser);
   };
 
   const handleVideoSelect = async (file: File) => {
@@ -148,8 +178,8 @@ function App() {
       };
 
       // Persist to DB
-      updateUser(updatedUser);
-      saveUserSession(user.email, newSession);
+      saveLocalUser(updatedUser);
+      saveLocalSession(newSession);
       
       // Update State
       setUser(updatedUser);
@@ -172,7 +202,7 @@ function App() {
       scheduled_workouts: [...(user.scheduled_workouts || []), workout]
     };
     setUser(updatedUser);
-    updateUser(updatedUser);
+    saveLocalUser(updatedUser);
   };
 
   const handleSaveManualActivity = (activity: ManualActivity) => {
@@ -207,15 +237,20 @@ function App() {
     };
 
     setUser(updatedUser);
-    updateUser(updatedUser);
+    saveLocalUser(updatedUser);
   };
 
+  // Loading state
   if (!user) {
-    return <Login onLogin={handleLogin} />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
+        <div className="w-12 h-12 border-4 border-gray-200 border-t-black dark:border-gray-800 dark:border-t-white rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   return (
-    <Layout userImage={user.avatar} onLogout={handleLogout} darkMode={darkMode} toggleTheme={toggleTheme}>
+    <Layout userImage={user.avatar} onResetData={handleClearData} darkMode={darkMode} toggleTheme={toggleTheme}>
       {/* Upload Modal */}
       {isUploading && (
         <VideoUpload 
